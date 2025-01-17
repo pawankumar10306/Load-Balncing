@@ -30,26 +30,26 @@ def load_data(path):
 
 # Plot Fitness vs Generation
 def plot_fitness_vs_generation(fitness_history):
-    plt.figure(figsize=(8, 4))
+    fig = plt.figure(figsize=(8, 4))
     plt.plot(fitness_history, label='Best Fitness per Generation')
     plt.title("Fitness vs Generation")
     plt.xlabel("Generation")
     plt.ylabel("Best Fitness")
     plt.grid(True)
     plt.legend()
-    st.pyplot()
+    st.pyplot(fig)
 
 def compare_algo(results,selected_algorithms):
     fitness_scores = [result['fitness'] for result in results.values()]
     max_fitness = max(fitness_scores)
     min_fitness = min(fitness_scores)
-    plt.figure(figsize=(10, 2))
+    fig = plt.figure(figsize=(10, 2))
     plt.bar(selected_algorithms, fitness_scores)
     plt.xlabel("Algorithms")
     plt.ylabel("Fitness Score")
     plt.title("Fitness Scores of Different Algorithms")
     plt.ylim(min_fitness - 1, max_fitness + 1)
-    st.pyplot()
+    st.pyplot(fig)
 
 def run_algorithm(algo, tasks, servers):
     start_time = time.time()
