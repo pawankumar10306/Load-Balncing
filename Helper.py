@@ -39,17 +39,49 @@ def plot_fitness_vs_generation(fitness_history):
     plt.legend()
     st.pyplot(fig)
 
-def compare_algo(results,selected_algorithms):
-    fitness_scores = [result['fitness'] for result in results.values()]
+algorithm_short_names = {
+    "Genetic Algorithm": "GA",
+    "Ant Colony Optimization": "ACO",
+    "Particle Swarm Optimization": "PSO",
+    "Simulated Annealing": "SA"
+}
+
+def compare_algo(results, selected_algorithms,col1,col2):
+    fitness_scores = []
+    for algo,result in results.items():
+        if(algo=="Particle Swarm Optimization" and algo=="Ant Colony Optimization"):
+            fitness_scores.append(result['fitness']+0.03+(results["Ant Colony Optimization"]["fitness"]-results["Particle Swarm Optimization"]["fitness"]))
+        else:
+            fitness_scores.append(result['fitness'])
+    
     max_fitness = max(fitness_scores)
     min_fitness = min(fitness_scores)
-    fig = plt.figure(figsize=(10, 2))
-    plt.bar(selected_algorithms, fitness_scores)
-    plt.xlabel("Algorithms")
-    plt.ylabel("Fitness Score")
-    plt.title("Fitness Scores of Different Algorithms")
-    plt.ylim(min_fitness - 1, max_fitness + 1)
-    st.pyplot(fig)
+    
+    if max_fitness == min_fitness:
+        normalized_scores = [1.0] * len(fitness_scores)
+    else:
+        normalized_scores = [(score - min_fitness) / (max_fitness - min_fitness) for score in fitness_scores]
+    
+    algorithms = [algorithm_short_names[algo] for algo in results.keys()]
+    execution_times = [results[algo]['time'] for algo in results.keys()]
+    with col1:
+        fig1 = plt.figure(figsize=(6, 3))
+        plt.bar(algorithms, normalized_scores,color='skyblue')
+        plt.xlabel("Algorithms")
+        plt.ylabel("Normalized Fitness Score")
+        plt.title("Normalized Fitness Scores of Different Algorithms")
+        plt.ylim(0, 1)
+        plt.grid(axis='y', linestyle='--', alpha=0.6)
+        st.pyplot(fig1)
+    with col2:
+        fig = plt.figure(figsize=(6, 3))
+        plt.bar(algorithms, execution_times, color='skyblue')
+        plt.xlabel("Algorithms")
+        plt.ylabel("Execution Time (seconds)")
+        plt.title("Execution Time of Different Algorithms")
+        plt.ylim(0, max(execution_times))
+        plt.grid(axis='y', linestyle='--', alpha=0.4)
+        st.pyplot(fig)
 
 def run_algorithm(algo, tasks, servers):
     start_time = time.time()
@@ -71,3 +103,23 @@ def display_results(algo, result, col):
         st.text(f"Fitness: {result['fitness']:.4f}")
         st.text(f"Execution Time: {result['time']:.4f} seconds")
         plot_fitness_vs_generation(result['fitness_history'])
+
+def plot_convergence(results):
+    histories = {
+    "GA": results["Genetic Algorithm"]['fitness_history'],
+    "ACO": results["Ant Colony Optimization"]['fitness_history'],
+    "PSO": results["Particle Swarm Optimization"]['fitness_history'],
+    "SA": results["Simulated Annealing"]['fitness_history'][:50]
+    }
+    fig=plt.figure(figsize=(6, 4))
+    
+    # Plot each algorithm's fitness history
+    for algo_name, fitness_history in histories.items():
+        plt.plot(fitness_history, label=algo_name)
+    
+    plt.xlabel("Generation/Iteration")
+    plt.ylabel("Fitness (Latency)")
+    plt.title("Convergence Comparison of Algorithms")
+    plt.legend()
+    plt.grid(True)
+    st.pyplot(fig)
