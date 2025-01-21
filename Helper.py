@@ -1,5 +1,6 @@
 import pandas as pd
 import time
+import numpy as np
 import matplotlib.pyplot as plt
 from Algorithms import ant_colony_optimization, pso, simulated_annealing, genetic_algorithm
 import streamlit as st
@@ -105,21 +106,90 @@ def display_results(algo, result, col):
         plot_fitness_vs_generation(result['fitness_history'])
 
 def plot_convergence(results):
+   
     histories = {
-    "GA": results["Genetic Algorithm"]['fitness_history'],
-    "ACO": results["Ant Colony Optimization"]['fitness_history'],
-    "PSO": results["Particle Swarm Optimization"]['fitness_history'],
-    "SA": results["Simulated Annealing"]['fitness_history'][:50]
+        "GA": results.get("Genetic Algorithm", {}).get('fitness_history', None),
+        "ACO": results.get("Ant Colony Optimization", {}).get('fitness_history', None),
+        "PSO": results.get("Particle Swarm Optimization", {}).get('fitness_history', None),
+        "SA": results.get("Simulated Annealing", {}).get('fitness_history', None)
     }
     fig=plt.figure(figsize=(6, 4))
     
     # Plot each algorithm's fitness history
     for algo_name, fitness_history in histories.items():
-        plt.plot(fitness_history, label=algo_name)
+        # plt.plot(fitness_history, label=algo_name)
+        if fitness_history is not None and len(fitness_history) > 0:
+            if algo_name == "SA":
+                plt.plot(fitness_history[:50], label=algo_name)  # Only plot the first 50 for SA
+            else:
+                plt.plot(fitness_history, label=algo_name)
+        else:
+            plt.plot([], label=f"{algo_name} - Data Missing")
     
     plt.xlabel("Generation/Iteration")
     plt.ylabel("Fitness (Latency)")
     plt.title("Convergence Comparison of Algorithms")
     plt.legend()
     plt.grid(True)
+    st.pyplot(fig)
+
+def plot_search_space_heatmaps(algo_data_dict):
+    fig, axes = plt.subplots(2,2,figsize=(12, 8))
+
+    # Convert each 2D list to a NumPy array for imshow
+    ga_array = algo_data_dict.get("Genetic Algorithm", {}).get('fitness_matrix', None)
+    aco_array = algo_data_dict.get("Ant Colony Optimization", {}).get('fitness_matrix', None)
+    pso_array = algo_data_dict.get("Particle Swarm Optimization", {}).get('fitness_matrix', None)
+    sa_array = algo_data_dict.get("Simulated Annealing", {}).get('fitness_matrix', None)
+
+    # Plot GA heatmap
+    ax_ga = axes[0,0]
+    if ga_array is not None:
+        ga_array=np.array(ga_array)
+        im_ga = ax_ga.imshow(ga_array, aspect='auto', cmap='viridis')
+        ax_ga.set_title("Genetic Algorithm (GA)")
+        ax_ga.set_xlabel("Population Index")
+        ax_ga.set_ylabel("Generation")
+        fig.colorbar(im_ga, ax=ax_ga, fraction=0.046, pad=0.04)
+
+    # Plot ACO heatmap
+    ax_aco = axes[0,1]
+    if aco_array is not None:
+        aco_array = np.array(aco_array)
+        im_aco = ax_aco.imshow(aco_array, aspect='auto', cmap='viridis')
+        ax_aco.set_title("Ant Colony Optimization (ACO)")
+        ax_aco.set_xlabel("Number of Ants")
+        ax_aco.set_ylabel("Iteration")
+        fig.colorbar(im_aco, ax=ax_aco, fraction=0.046, pad=0.04)
+
+    # Plot PSO heatmap
+    ax_pso = axes[1,0]
+    if pso_array is not None:
+        pso_array = np.array(pso_array)
+        im_pso = ax_pso.imshow(pso_array, aspect='auto', cmap='viridis')
+        ax_pso.set_title("Particle Swarm Optimization (PSO)")
+        ax_pso.set_xlabel("Swarm Size")
+        ax_pso.set_ylabel("Iteration")
+        fig.colorbar(im_pso, ax=ax_pso, fraction=0.046, pad=0.04)
+
+    # Plot SA heatmap
+    ax_sa = axes[1,1]
+    if sa_array is not None:
+        sa_array=np.array(sa_array)
+        yleft=np.array(sa_array[:,0])
+        yright=np.array(sa_array[:,1])
+
+        sa_array = np.array(yleft)[:, np.newaxis]
+        im_sa = ax_sa.imshow(sa_array, aspect='auto', cmap='viridis')
+        ax_sa.set_title("Simulated Annealing (SA)")
+        ax_sa.xaxis.set_visible(False)
+        ax_sa.set_ylabel("Iteration")
+        fig.colorbar(im_sa, ax=ax_sa, fraction=0.046, pad=0.1)
+        ax_sa_right = ax_sa.twinx()
+        ax_sa_right.set_ylabel("Temperature")
+        ax_sa_right.set_yticks(np.arange(len(yright)))
+        ax_sa_right.set_yticklabels([f"{temp:.0f}" for temp in yright])
+        ax_sa_right.set_ylim(len(yright)-1, 0)
+
+    plt.tight_layout()
     st.pyplot(fig)

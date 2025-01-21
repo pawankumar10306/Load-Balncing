@@ -1,5 +1,5 @@
 import streamlit as st
-from Helper import load_data, plot_fitness_vs_generation, compare_algo,display_results,run_algorithm,plot_convergence
+from Helper import load_data, plot_fitness_vs_generation, compare_algo,display_results,run_algorithm,plot_convergence,plot_search_space_heatmaps
 
 st.set_page_config(layout="wide")
 st.title("Meta-Heuristic Approaches for Resource Allocation in Edge Computing")
@@ -20,7 +20,6 @@ selected_algorithms = st.multiselect(
 
 if "Select All" in selected_algorithms:
     selected_algorithms = algorithms
-# selected_algorithms = st.multiselect("Select Optimization Algorithms", algorithms,default=Any)
 
 tasks = None
 servers = None
@@ -42,6 +41,7 @@ if st.button("Run Selected Algorithms") and tasks is not None and servers is not
     for algo in selected_algorithms:
         allocation, exec_time = run_algorithm(algo, tasks, servers)
         results[algo] = {
+            'fitness_matrix':allocation['fitness_matrix'],
             'fitness_history': allocation['fitness history'],
             'allocation': allocation['best_individual'],
             'fitness': allocation['fitness'],
@@ -52,8 +52,15 @@ if st.button("Run Selected Algorithms") and tasks is not None and servers is not
         col = col1 if i % 2 == 0 else col2
         display_results(algo, result, col)
 
+    st.divider()
+    st.header("Comparison of Optimization Algorithms",divider=True)
+    col1, col2 = st.columns(2)
     if len(selected_algorithms) > 1:
-        st.subheader("Comparison of Optimization Algorithms")
-        col1, col2 = st.columns(2)
         compare_algo(results, selected_algorithms,col1,col2)
+    st.subheader("Search Space Exploration")
+    plot_search_space_heatmaps(results)
+    with col1:
         plot_convergence(results)
+    with col2:
+        with st.expander("Show Scalability"):
+            st.image("Scalability.jpg")

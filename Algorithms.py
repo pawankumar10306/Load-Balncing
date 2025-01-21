@@ -123,6 +123,7 @@ def genetic_algorithm(tasks, servers):
     # Step 1: Create initial population
     population = create_population(pop_size, tasks, servers)
     fitness_history = []
+    fitness_matrix = []
 
     for generation in range(generations):
         # Step 2: Evaluate fitness of the population
@@ -131,7 +132,6 @@ def genetic_algorithm(tasks, servers):
 
         # Step 3: Plot Fitness vs Individual for this generation
         fitness_values = [fitness(ind, tasks) for ind in population]
-
         # print(f"\nGeneration {generation+1}: Best fitness (latency) = {fitness(population[0], tasks):.4f}")
         # plot_fitness_vs_individual(population, fitness_values, generation)
 
@@ -144,6 +144,7 @@ def genetic_algorithm(tasks, servers):
             child1, child2 = crossover(parent1, parent2)
             next_generation.extend([mutate(child1, servers, mutation_rate), mutate(child2, servers, mutation_rate)])
 
+        fitness_matrix.append(fitness_values)
         # Step 5: Replace the old population with the new one
         population = next_generation[:pop_size]
 
@@ -155,26 +156,12 @@ def genetic_algorithm(tasks, servers):
     best_individual = population[0]
     assignment = [server.server_id for task, server in zip(tasks, best_individual)]
     return {
+        "fitness_matrix":fitness_matrix,
         "fitness history":fitness_history,
         "best_individual": assignment,
         "fitness": fitness(best_individual, tasks)
     }
 
-# tasks, servers = load_data()
-
-# Generate latency matrix
-# latency_matrix = generate_latency_matrix(tasks, servers)
-# plot_latency_matrix(latency_matrix, tasks, servers)
-
-# Manually Done
-# Best_Assignments, Best_Latency = best_task_server_assignment(latency_matrix, tasks, servers)
-# print(f"Best solution (task-server assignment): {Best_Assignments}")
-# print(f"Fitness of the best solution: {Best_Latency:.4f}")
-
-# Run the genetic algorithm
-# GeneticAlgorithm = genetic_algorithm(tasks, servers)
-# print(f"Best solution (task-server assignment): {GeneticAlgorithm['best_individual']}")
-# print(f"Fitness of the best solution: {GeneticAlgorithm['fitness']:.4f}")
 
 
 # Simulated Annealing
@@ -201,14 +188,14 @@ def simulated_annealing(tasks, servers):
     best_solution = np.copy(current_solution)
     best_fitness = current_fitness
 
+    fit_temp=[]
     fitness_history = [best_fitness]
-
     temperature = initial_temperature
+    fit_temp.append([best_fitness,temperature])
 
     for iteration in range(max_iterations):
         if temperature <= final_temperature:
             break
-
         # Generate a neighbor solution by randomly reassigning one task to a different server
         neighbor_solution = np.copy(current_solution)
         random_task = np.random.randint(0, num_tasks)
@@ -216,7 +203,6 @@ def simulated_annealing(tasks, servers):
         neighbor_solution[random_task] = random_server
 
         neighbor_fitness = compute_total_latency_sa(neighbor_solution, latency_matrix)
-
         # Calculate the acceptance probability
         delta = neighbor_fitness - current_fitness
         if delta < 0:
@@ -240,23 +226,15 @@ def simulated_annealing(tasks, servers):
 
         # Decrease the temperature
         temperature *= cooling_rate
-
+        fit_temp.append([best_fitness,temperature])
         # print(f"Iteration {iteration}: Best fitness (latency) = {best_fitness:.4f}")
 
-    # Plot fitness vs iteration
-    # print("\nOptimization complete. Final Best Fitness =", best_fitness)
-    # plot_fitness_vs_generation(fitness_history)
-
     return {
+        "fitness_matrix":fit_temp,
         "fitness history":fitness_history,
         "best_individual": [servers[idx].server_id for idx in best_solution],
         "fitness": best_fitness
     }
-
-# Simulated Annealing
-# Simulated_solution = simulated_annealing(tasks, servers, latency_matrix)
-# print("Best solution (task-server assignment):", Simulated_solution['best_individual'])
-# print(f"Fitness of the best solution: {Simulated_solution['fitness']:.4f}")
 
 
 # Function for ants to construct solutions
@@ -334,7 +312,7 @@ def ant_colony_optimization(tasks, servers):
     best_solution = None
     best_fitness = float('inf')
     fitness_history = []
-
+    fitness_matrix=[]
     for iteration in range(iterations):
         solutions = []
         fitnesses = []
@@ -356,27 +334,15 @@ def ant_colony_optimization(tasks, servers):
 
         fitness_history.append(best_fitness)
 
-        # Optionally, print intermediate results
-        # print(f"Iteration {iteration+1}: Best fitness (latency) = {best_fitness:.4f}")
-
-    # Plot fitness vs iteration
-    # print("\n\nFitness vs Iteration:")
-    # plot_fitness_vs_generation(fitness_history)
-
+        fitness_matrix.append(fitnesses)
     # Return the best solution with its fitness
     assignment = [servers[server_index].server_id for server_index in best_solution]
     return {
+        "fitness_matrix":fitness_matrix,
         "fitness history":fitness_history,
         "best_individual": assignment,
         "fitness": best_fitness
     }
-
-
-# Run the Ant Colony Optimization algorithm
-# ACO_solution = ant_colony_optimization(tasks, servers)
-# print(f"Best solution (task-server assignment): {ACO_solution['best_individual']}")
-# print(f"Fitness of the best solution: {ACO_solution['fitness']:.4f}")
-
 
 
 # Particle Swarm Optimization Algorithm
@@ -407,6 +373,8 @@ def pso(tasks, servers):
         assignment = discretize_position(positions[i])
         f = compute_total_latency_aco(assignment, tasks, servers)
         fitnesses.append(f)
+    
+    fitness_matrix = [fitnesses]
     fitnesses = np.array(fitnesses)
 
     # Initialize personal bests
@@ -419,9 +387,10 @@ def pso(tasks, servers):
     gbest_fitness = pbest_fitnesses[gbest_index]
 
     fitness_history = [gbest_fitness]
-
+    
     # Main PSO loop
     for iteration in range(iterations):
+        fitness_iter=[]
         for i in range(swarm_size):
             r1 = np.random.random(num_tasks)
             r2 = np.random.random(num_tasks)
@@ -434,7 +403,7 @@ def pso(tasks, servers):
             # Evaluate fitness after update
             assignment = discretize_position(positions[i])
             f = compute_total_latency_aco(assignment, tasks, servers)
-
+            fitness_iter.append(f)
             # Update personal best if better
             if f < pbest_fitnesses[i]:
                 pbest_fitnesses[i] = f
@@ -444,43 +413,20 @@ def pso(tasks, servers):
             if f < gbest_fitness:
                 gbest_fitness = f
                 gbest_position = np.copy(positions[i])
+        
+        fitnesses[i] = f
 
         fitness_history.append(gbest_fitness)
         # print(f"Iteration {iteration+1}: Best fitness (latency) = {gbest_fitness:.4f}")
-
+        fitness_matrix.append(fitness_iter)
     # Plot the fitness over iterations
     # print("\nFitness vs Iteration:")
     # plot_fitness_vs_generation(fitness_history)
 
     best_assignment = discretize_position(gbest_position)
     return {
+        "fitness_matrix": fitness_matrix,
         "fitness history":fitness_history,
         "best_individual": [servers[idx].server_id for idx in best_assignment],
         "fitness": gbest_fitness
     }
-
-# Run PSO
-# PSO_solution = pso(tasks, servers)
-# print(f"Best solution (task-server assignment): {PSO_solution['best_individual']}")
-# print(f"Fitness of the best solution: {PSO_solution['fitness']:.4f}")
-
-# Manually Done
-# print(latency_matrix)
-# print(f"\nBest solution (Manually Calculated): {Best_Assignments}")
-# print(f"Fitness of the best solution: {Best_Latency:.4f}")
-
-#Genetic Algorithm
-# print(f"Best solution (Genetic Algorithm): {GeneticAlgorithm['best_individual']}")
-# print(f"Fitness of the best solution: {GeneticAlgorithm['fitness']:.4f}")
-
-# Ant Colony Optimization
-# print(f"Best solution (task-server assignment): {ACO_solution['best_individual']}")
-# print(f"Fitness of the best solution: {ACO_solution['fitness']:.4f}")
-
-# Particle Swarm Optimization
-# print(f"Best solution (task-server assignment): {PSO_solution['best_individual']}")
-# print(f"Fitness of the best solution: {PSO_solution['fitness']:.4f}")
-
-# Simulated Annealing
-# print("Best solution (task-server assignment):", Simulated_solution['best_individual'])
-# print(f"Fitness of the best solution: {Simulated_solution['fitness']:.4f}")

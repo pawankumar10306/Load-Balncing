@@ -1,3 +1,0 @@
-convergenc
-execution time
-fitness score
